@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { ratelimt } from "@/lib/ratelimit";
 import { auth } from "@clerk/nextjs/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
@@ -42,6 +43,15 @@ export const protectedProducedure = t.procedure.use(
         code: "UNAUTHORIZED",
         message:
           "You are not authenticated. Please sign in or create an account.",
+      });
+    }
+
+    const { success } = await ratelimt.limit(user.id);
+
+    if (!success) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many requests. Please try again later.",
       });
     }
 
